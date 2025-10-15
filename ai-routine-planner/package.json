@@ -1,0 +1,26 @@
+{
+  "name": "ai-routine-planner",
+  "version": "1.0.0",
+  "description": "AI-augmented workout routine planner using Google's Gemini API",
+  "main": "dist/routine-planner-tests.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "npm run build && node dist/routine-planner-tests.js",
+    "dev": "ts-node --transpile-only routine-planner-tests.ts",
+    "test": "npm run build && node dist/routine-planner-tests.js",
+    "manual": "npm run build && node -e \"require('./dist/routine-planner-tests.js').testManualWorkouts()\"",
+    "ai": "npm run build && node -e \"require('./dist/routine-planner-tests.js').testAIWorkouts()\"",
+    "mixed": "npm run build && node -e \"require('./dist/routine-planner-tests.js').testMixedWorkouts()\""
+  },
+  "keywords": ["gemini", "ai", "workout", "fitness", "routine", "demo", "typescript"],
+  "author": "Student Demo",
+  "license": "MIT",
+  "dependencies": {
+    "@google/generative-ai": "^0.21.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0",
+    "ts-node": "^10.9.0"
+  }
+}

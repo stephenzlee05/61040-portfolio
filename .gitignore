@@ -1,0 +1,23 @@
+# API Keys and sensitive data
+ai-routine-planner/config.json
+
+# Generated files
+
+# TypeScript build output
+ai-routine-planner/dist/
+
+# Node.js dependencies
+ai-routine-planner/node_modules/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

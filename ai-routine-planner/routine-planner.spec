@@ -92,3 +92,4 @@ notes
     The system maintains workout templates, tracks training volume, and provides
     intelligent suggestions based on user preferences and training history.
 </concept_spec>
+

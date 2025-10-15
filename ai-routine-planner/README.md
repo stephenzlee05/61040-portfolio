@@ -180,6 +180,30 @@ The implementation follows the AI-augmented RoutinePlanner concept specification
 - Integration with wearable device data
 - Social features for sharing and rating workouts
 
+## 🧪 Advanced Testing
+
+The project includes advanced stress testing capabilities to explore the limits of AI augmentation:
+
+### Advanced Test Scripts
+
+- `npm run test:advanced` - Run stress tests with challenging scenarios and prompt engineering experiments
+
+### Test Documentation
+
+- `STRESS_TEST_SUMMARY.md` - Summary of 3 challenging test cases and 3 prompt variants
+- `EXPERIMENTAL_ANALYSIS.md` - Detailed analysis of AI augmentation limits and capabilities
+- `advanced-test-cases.ts` - Implementation of stress testing scenarios
+
+### Key Findings
+
+The advanced tests reveal that the AI augmentation can handle:
+- Complex multi-constraint scenarios with intelligent trade-offs
+- Ambiguous and contradictory instructions through creative interpretation
+- Extreme edge cases (3-hour workouts, comprehensive muscle targeting)
+
+However, several issues remain around exercise database coverage and safety validation that need addressing for production use.
+
 ## 📄 License
 
 This is a prototype created for educational purposes as part of Assignment 3.
+

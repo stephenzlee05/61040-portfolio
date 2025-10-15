@@ -17,4 +17,8 @@ Some fun facts about me:
 
 [Link to Pset 2](assignments/pset2.md)
 
-[Link to Assignment 2](assignment/assignmenet2.md)
+[Link to Assignment 2](assignment/assignment2.md)
+
+[Link to Assignment 3](https://github.com/stephenzlee05/61040-project)
+
+[Link to Assignment 4a](https://github.com/stephenzlee05/PlateMate)

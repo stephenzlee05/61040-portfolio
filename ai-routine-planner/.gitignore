@@ -1,13 +1,13 @@
 # API Keys and sensitive data
-ai-routine-planner/config.json
+config.json
 
 # Generated files
 
 # TypeScript build output
-ai-routine-planner/dist/
+dist/
 
 # Node.js dependencies
-ai-routine-planner/node_modules/
+node_modules/
 
 # Logs
 *.log

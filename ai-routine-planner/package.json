@@ -10,7 +10,8 @@
     "test": "npm run build && node dist/routine-planner-tests.js",
     "manual": "npm run build && node -e \"require('./dist/routine-planner-tests.js').testManualWorkouts()\"",
     "ai": "npm run build && node -e \"require('./dist/routine-planner-tests.js').testAIWorkouts()\"",
-    "mixed": "npm run build && node -e \"require('./dist/routine-planner-tests.js').testMixedWorkouts()\""
+    "mixed": "npm run build && node -e \"require('./dist/routine-planner-tests.js').testMixedWorkouts()\"",
+    "test:advanced": "npm run build && node dist/run-advanced-tests.js"
   },
   "keywords": ["gemini", "ai", "workout", "fitness", "routine", "demo", "typescript"],
   "author": "Student Demo",
@@ -24,3 +25,4 @@
     "ts-node": "^10.9.0"
   }
 }
+

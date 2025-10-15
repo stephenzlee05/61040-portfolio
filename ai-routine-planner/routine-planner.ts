@@ -250,7 +250,7 @@ export class ExerciseDatabase {
             name: 'Russian Twists',
             muscleGroups: new Set([MuscleGroup.ABS]),
             movementPattern: 'rotation',
-            equipment: 'bodyweight or medicine ball',
+            equipment: 'none',
             instructions: 'Sit, lean back, rotate torso side to side'
         }],
         
@@ -371,6 +371,8 @@ export class AIRoutinePlanner {
             const template = this.parseAIResponse(response, prompt);
             
             if (template) {
+                // Validate against plausible failure modes
+                this.validateAIGeneratedTemplate(template, preferences);
                 // Store the template
                 this.workoutTemplates.set(template.templateId, template);
                 
@@ -490,8 +492,29 @@ export class AIRoutinePlanner {
         
         try {
             // Create customization prompt
-            const prompt = `Modify this workout: ${originalTemplate.name}. Changes requested: ${modifications}. 
-            Original workout: ${JSON.stringify(originalTemplate)}`;
+            const prompt = `You are a fitness trainer. I need you to modify an existing workout based on specific requests.
+
+ORIGINAL WORKOUT: "${originalTemplate.name}"
+MODIFICATIONS REQUESTED: "${modifications}"
+
+EXERCISES IN ORIGINAL WORKOUT:
+${originalTemplate.exercises.map(ex => `- ${ex.exercise.name} (${ex.sets} sets, ${ex.reps} reps)`).join('\n')}
+
+Please create a modified workout that incorporates the requested changes. Respond with ONLY a JSON object in this exact format:
+{
+    "workout_name": "Modified workout name",
+    "estimated_duration": 45,
+    "exercises": [
+        {
+            "exercise_name": "Exercise Name",
+            "sets": 3,
+            "reps": 8,
+            "rest_time": 90
+        }
+    ]
+}
+
+Make sure all exercise names exactly match exercises from a standard gym database (Bench Press, Squats, Pull-ups, etc.).`;
             
             console.log('🤖 Requesting workout customization from Gemini AI...');
             const response = await this.llm.executeLLM(prompt);
@@ -506,6 +529,8 @@ export class AIRoutinePlanner {
             const customizedTemplate = this.parseAIResponse(response, `Customized from: ${originalTemplate.name}. ${modifications}`);
             
             if (customizedTemplate) {
+                // Validate against plausible failure modes using stored preferences
+                this.validateAIGeneratedTemplate(customizedTemplate, preferences);
                 // Store the customized template
                 this.workoutTemplates.set(customizedTemplate.templateId, customizedTemplate);
                 
@@ -628,8 +653,25 @@ Make sure all exercise names exactly match the available exercises listed above.
 
     private parseAIResponse(response: string, prompt: string): WorkoutTemplate | null {
         try {
-            // Extract JSON from response
-            const jsonMatch = response.match(/\{[\s\S]*\}/);
+            // Extract JSON from response - handle both simple JSON and complex responses
+            let jsonMatch = response.match(/\{[\s\S]*\}/);
+            
+            // If no JSON found, try to find JSON within markdown code blocks
+            if (!jsonMatch) {
+                const codeBlockMatch = response.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
+                if (codeBlockMatch) {
+                    jsonMatch = [codeBlockMatch[1]];
+                }
+            }
+            
+            // If still no JSON, try to find any JSON-like structure
+            if (!jsonMatch) {
+                const anyJsonMatch = response.match(/\{[\s\S]*?"workout_name"[\s\S]*?\}/);
+                if (anyJsonMatch) {
+                    jsonMatch = anyJsonMatch;
+                }
+            }
+            
             if (!jsonMatch) {
                 throw new Error('No JSON found in response');
             }
@@ -663,6 +705,10 @@ Make sure all exercise names exactly match the available exercises listed above.
                 exercise.muscleGroups.forEach(mg => usedMuscleGroups.add(mg));
             }
             
+            if (exerciseSets.length === 0) {
+                throw new Error('No valid exercises found after parsing AI response');
+            }
+            
             // Create workout template
             const templateId = `ai_generated_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
             const template: WorkoutTemplate = {
@@ -683,9 +729,109 @@ Make sure all exercise names exactly match the available exercises listed above.
         }
     }
 
+    /**
+     * Validators for LLM-generated templates to catch common logical issues
+     * Throws an Error if a validation fails
+     */
+    private validateAIGeneratedTemplate(template: WorkoutTemplate, preferences: UserPreferences): void {
+        // 1) Schema/content sanity: non-empty name, exercises, sensible bounds
+        if (!template.name || template.name.trim().length < 3) {
+            throw new Error('Validation failed: workout_name is missing or too short');
+        }
+        if (!template.exercises || template.exercises.length === 0) {
+            throw new Error('Validation failed: exercises list is empty');
+        }
+
+        // Prevent duplicates and ensure reasonable sets/reps/rest bounds per experience level
+        const seenExerciseIds = new Set<string>();
+        let totalSets = 0;
+        for (const set of template.exercises) {
+            if (seenExerciseIds.has(set.exercise.exerciseId)) {
+                throw new Error(`Validation failed: duplicate exercise detected - ${set.exercise.name}`);
+            }
+            seenExerciseIds.add(set.exercise.exerciseId);
+
+            totalSets += set.sets;
+        }
+
+        // Experience-level volume heuristics
+        if (preferences.experienceLevel === ExperienceLevel.BEGINNER && totalSets > 24) {
+            throw new Error(`Validation failed: total sets (${totalSets}) too high for beginner profile`);
+        }
+
+        // 2) Equipment feasibility: all exercises must be performable with available equipment
+        const available = new Set(this.getAvailableExercises(preferences.availableEquipment).map(e => e.exerciseId));
+        for (const set of template.exercises) {
+            if (!available.has(set.exercise.exerciseId)) {
+                throw new Error(`Validation failed: exercise not available with provided equipment - ${set.exercise.name}`);
+            }
+        }
+
+        // 3) Time feasibility: estimatedDuration vs computed and session budget with tolerance
+        const computedDuration = this.computeEstimatedDurationMinutes(template.exercises);
+        const durationDiff = Math.abs(computedDuration - template.estimatedDuration);
+        // More lenient deviation from computed duration
+        if (durationDiff > Math.max(15, preferences.timePerSession * 0.6)) {
+            throw new Error(`Validation failed: estimated_duration (${template.estimatedDuration}m) deviates too far from computed (${computedDuration.toFixed(0)}m)`);
+        }
+
+        // More lenient allowance over/under session time budget
+        const sessionTolerance = Math.max(15, preferences.timePerSession * 0.5);
+        if (template.estimatedDuration > preferences.timePerSession + sessionTolerance) {
+            throw new Error(`Validation failed: plan exceeds session time by more than tolerance (${template.estimatedDuration}m > ${preferences.timePerSession}m + ${sessionTolerance}m)`);
+        }
+        if (template.estimatedDuration < Math.max(10, preferences.timePerSession * 0.25)) {
+            throw new Error(`Validation failed: plan is unrealistically short for requested session (${template.estimatedDuration}m)`);
+        }
+
+        // 4) Minimal muscle group diversity when user specifies preferred groups (soft requirement)
+        if (preferences.preferredMuscleGroups && preferences.preferredMuscleGroups.length > 0) {
+            const overlap = preferences.preferredMuscleGroups.filter(mg => template.muscleGroups.has(mg));
+            if (overlap.length === 0) {
+                throw new Error('Validation failed: none of the preferred muscle groups are targeted');
+            }
+        }
+    }
+
+    /**
+     * Compute duration from sets, reps and rest time using simple heuristics
+     */
+    private computeEstimatedDurationMinutes(exercises: ExerciseSet[]): number {
+        let totalSeconds = 0;
+        for (const set of exercises) {
+            const timePerRepSeconds = 3; // average tempo
+            const workSeconds = set.sets * set.reps * timePerRepSeconds;
+            const restSeconds = set.sets * (set.restTime ?? 90);
+            totalSeconds += workSeconds + restSeconds;
+        }
+        return Math.round(totalSeconds / 60);
+    }
+
     private findExerciseByName(name: string): Exercise | null {
         const exercises = ExerciseDatabase.getAllExercises();
-        return exercises.find(ex => ex.name.toLowerCase() === name.toLowerCase()) || null;
+        
+        // First try exact match
+        let exercise = exercises.find(ex => ex.name.toLowerCase() === name.toLowerCase());
+        if (exercise) return exercise;
+        
+        // Try to find by removing common prefixes/suffixes
+        const normalizedName = name.toLowerCase()
+            .replace(/^dumbbell\s+/, '') // Remove "dumbbell " prefix
+            .replace(/^barbell\s+/, '')  // Remove "barbell " prefix
+            .replace(/\s+\(.*\)$/, '')   // Remove parentheses and contents
+            .replace(/\s+on\s+.*$/, '')  // Remove "on knees", "on bench" etc
+            .trim();
+            
+        exercise = exercises.find(ex => ex.name.toLowerCase() === normalizedName);
+        if (exercise) return exercise;
+        
+        // Try partial matching for common variations
+        const partialMatches = exercises.filter(ex => 
+            normalizedName.includes(ex.name.toLowerCase()) || 
+            ex.name.toLowerCase().includes(normalizedName)
+        );
+        
+        return partialMatches.length > 0 ? partialMatches[0] : null;
     }
 
     private getAvailableExercises(equipment: string[]): Exercise[] {

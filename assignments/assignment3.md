@@ -78,23 +78,6 @@ concept AIRoutinePlanner [User, Exercise]
       effect uses LLM to provide detailed analysis and recommendations for workout template
 ~~~
 
-
-**New LLM-Powered Actions:**
-
-1. **generateWorkoutFromPrompt**: Takes natural language descriptions like "I want a 45-minute upper body workout focusing on strength" and generates a complete workout template with appropriate exercises, sets, and reps based on user preferences and fitness level.
-
-2. **customizeWorkout**: Allows users to modify existing templates through natural language, such as "add more core work" or "make this more beginner-friendly."
-
-3. **analyzeWorkout**: Provides intelligent feedback on workout templates, suggesting improvements, identifying potential imbalances, or explaining the benefits of specific exercise selections.
-
-**Enhanced State:**
-- Added `isAIGenerated` flag to track AI-created templates
-- Added `generationPrompt` to store the original request for reference
-- Added `UserPreferences` to provide context for AI generation
-
-**Preserved Functionality:**
-All original actions remain unchanged, ensuring the concept can function without AI components. Users can still manually create templates, get volume-based suggestions, and track training balance.
-
 ~~~
 sync startWorkout
   when
@@ -137,126 +120,11 @@ sync checkBalance
 
 ## Design the user interaction
 
-### Low-Fidelity UI Sketches
+### Figure 1: AI Workout Generation Entry Point
+![](../Screenshot5.png)
 
-#### Sketch 1: AI Workout Generation Entry Point
-```
-┌─────────────────────────────────────────────────────────┐
-│  PlateMate - AI Workout Generator                       │
-├─────────────────────────────────────────────────────────┤
-│                                                         │
-│  ┌─────────────────────────────────────────────────┐   │
-│  │ 💬 "Generate AI Workout"                        │   │
-│  │                                                 │   │
-│  │ Describe your workout:                          │   │
-│  │ ┌─────────────────────────────────────────────┐ │   │
-│  │ │ I want a 45-minute upper body workout      │ │   │
-│  │ │ focusing on strength building              │ │   │
-│  │ └─────────────────────────────────────────────┘ │   │
-│  │                                                 │   │
-│  │ [Generate Workout] [Cancel]                    │   │
-│  └─────────────────────────────────────────────────┘   │
-│                                                         │
-│  ┌─────────────────────────────────────────────────┐   │
-│  │ Or choose from templates:                       │   │
-│  │ • Upper Body Strength                          │   │
-│  │ • Full Body Beginner                           │   │
-│  │ • Chest & Triceps                              │   │
-│  │ • Back & Biceps                                │   │
-│  └─────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────┘
-
-Context to LLM: User prompt + profile data
-┌─────────────────────────────────────────────────────────┐
-│ LLM receives:                                           │
-│ • User prompt: "45-min upper body strength"            │
-│ • Experience: Intermediate                             │
-│ • Equipment: [barbell, dumbbells, bench]              │
-│ • Goals: "Build muscle and strength"                   │
-│ • Time: 45 minutes                                     │
-│ • Preferred groups: chest, back, shoulders             │
-└─────────────────────────────────────────────────────────┘
-```
-
-#### Sketch 2: AI-Generated Workout Display
-```
-┌─────────────────────────────────────────────────────────┐
-│  🤖 AI Generated: Upper Body Strength Builder          │
-├─────────────────────────────────────────────────────────┤
-│                                                         │
-│  ⏱️ Duration: 45 minutes                                │
-│  🎯 Focus: Chest, Back, Shoulders, Arms                │
-│                                                         │
-│  ┌─────────────────────────────────────────────────┐   │
-│  │ 📋 Workout Plan                                │   │
-│  │                                                 │   │
-│  │ 1. Bench Press                                 │   │
-│  │    ████ 4 sets × 6 reps (120s rest)           │   │
-│  │                                                 │   │
-│  │ 2. Pull-ups                                    │   │
-│  │    ███ 3 sets × 8 reps (90s rest)             │   │
-│  │                                                 │   │
-│  │ 3. Overhead Press                              │   │
-│  │    ███ 3 sets × 8 reps (90s rest)             │   │
-│  │                                                 │   │
-│  │ 4. Bent-over Rows                              │   │
-│  │    ███ 3 sets × 10 reps (90s rest)            │   │
-│  │                                                 │   │
-│  │ 5. Bicep Curls                                 │   │
-│  │    ███ 3 sets × 12 reps (60s rest)            │   │
-│  │                                                 │   │
-│  │ 6. Tricep Dips                                 │   │
-│  │    ███ 3 sets × 10 reps (60s rest)            │   │
-│  └─────────────────────────────────────────────────┘   │
-│                                                         │
-│  [✅ Use This Workout] [✏️ Edit] [🔄 Regenerate]        │
-└─────────────────────────────────────────────────────────┘
-
-LLM Output: Structured workout template
-┌─────────────────────────────────────────────────────────┐
-│ LLM provides:                                          │
-│ • Exercise names from database                         │
-│ • Sets/reps/rest recommendations                       │
-│ • Progressive overload principles                      │
-│ • Equipment-appropriate selections                     │
-└─────────────────────────────────────────────────────────┘
-```
-
-#### Sketch 3: Workout Confirmation and Customization
-```
-┌─────────────────────────────────────────────────────────┐
-│  ✏️ Customize AI Workout                               │
-├─────────────────────────────────────────────────────────┤
-│                                                         │
-│  ┌─────────────────────────────────────────────────┐   │
-│  │ 💬 What would you like to change?               │   │
-│  │ ┌─────────────────────────────────────────────┐ │   │
-│  │ │ Add more core work and make it more        │ │   │
-│  │ │ beginner-friendly                          │ │   │
-│  │ └─────────────────────────────────────────────┘ │   │
-│  │                                                 │   │
-│  │ [Apply Changes] [Cancel]                       │   │
-│  └─────────────────────────────────────────────────┘   │
-│                                                         │
-│  ┌─────────────────────────────────────────────────┐   │
-│  │ Or make specific changes:                       │   │
-│  │                                                 │   │
-│  │ • Remove: Tricep Dips                          │   │
-│  │ • Add: Plank (3 sets × 30s)                    │   │
-│  │ • Modify: Reduce bench press to 3 sets         │   │
-│  │                                                 │   │
-│  │ [Save Changes]                                  │   │
-│  └─────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────┘
-
-Context to LLM: Original workout + modification request
-┌─────────────────────────────────────────────────────────┐
-│ LLM receives:                                          │
-│ • Original workout template                            │
-│ • User modification: "add core, make beginner-friendly"│
-│ • Updated preferences if needed                        │
-└─────────────────────────────────────────────────────────┘
-```                                                  
+### Figure 2: Workout Confirmation and Customization
+![](../Screenshot6.png)
 
 ### User Journey Description
 
@@ -264,3 +132,71 @@ The user journey begins when a fitness enthusiast opens PlateMate and wants to t
 
 
 ## Implement your concept
+
+Implemented in ai-coutine-planner folder
+
+## Explore richer test cases and prompts
+
+### Test Case 1: Complex Multi-Constraint Scenario
+- **User actions (sequence)**:
+  - **Set preferences**: Intermediate experience; goals include strength + cardio health + injury prevention; equipment: barbell, dumbbells, bench, pull-up bar, kettlebell; time per session: 30 min; preferred groups: chest, back, legs, shoulders.
+  - **Request generation**: "Create a workout that meets these competing requirements…" (explicit conflicts: short time vs long rest, warm-up cost, 4 groups in 30 min).
+  - **Review**: Inspect duration, muscle-group coverage, and rest distributions.
+- **LLM-based actions**:
+  - Parse competing constraints; propose exercise list with trade-offs (e.g., paired supersets, circuit-style warm-up, capped rest ≤ 180s).
+  - Output strictly formatted JSON with workout name conveying the trade-off rationale.
+- **Likely failure modes**:
+  - Exceeds 30–35 min; too few muscle groups; unstructured or invalid JSON; rest periods inconsistent with constraints.
+- **Prompt variant**: Structured constraint-based prompting.
+  - Approach: Force explicit analysis, conflict resolution, and validation before emitting JSON.
+  - What worked: Better adherence to rest caps and coverage; fewer invalid-JSON errors.
+  - What went wrong: Occasionally still over time budget; reasoning not always reflected in exercise choices.
+  - Remaining issues: Hallucinated equipment usage and occasional estimate drift on duration.
+
+In this experiment I enforced structure to tame conflicts (time vs rest, warm-up vs volume, four-group coverage). The structured constraint prompt improved JSON validity and rest caps, but the LLM still occasionally exceeded the time budget and sometimes chose exercises that didn’t perfectly reflect the stated reasoning. Equipment hallucinations and duration drift remain the key risks.
+
+### Test Case 2: Ambiguous and Contradictory Instructions
+- **User actions (sequence)**:
+  - **Set preferences**: Beginner; goals: strength + flexibility; equipment: bodyweight, bands; 45 min.
+  - **Request generation**: Intentionally contradictory prompt (intense yet relaxing, bodyweight yet heavy weights, beginner yet advanced, etc.).
+  - **Review**: Ensure reasonable name, non-empty plan, plausible 30–60 min estimate.
+- **LLM-based actions**:
+  - Resolve contradictions via compromises (e.g., intervals combining mobility with strength; RPE scaling; optional progressions).
+  - Emit JSON within requested schema.
+- **Likely failure modes**:
+  - Literal satisfaction attempts (mutually exclusive constraints); unsafe prescriptions for beginners; schema drift.
+- **Prompt variant**: Role-based expert prompting.
+  - Approach: Assign a seasoned coach persona to prioritize safety and evidence-based compromises.
+  - What worked: Safer regressions, clearer rationale, fewer contradictory steps.
+  - What went wrong: Sometimes overly conservative; may underdeliver intensity.
+  - Remaining issues: Occasional verbosity and slight schema deviations when adding rationale.
+
+Here I used a role-based expert persona to prioritize safety and evidence-based compromises over literal (and impossible) satisfactions. This reduced contradictions and improved beginner suitability, though it sometimes became too conservative and occasionally leaked extra rationale that risked schema drift. Balancing intensity with safety is still fragile under extreme ambiguity.
+
+### Test Case 3: Extreme Edge Cases and Boundary Testing
+- **User actions (sequence)**:
+  - **Set preferences**: Advanced; goal: extreme challenge; equipment: extensive; 180 min; target many muscle groups.
+  - **Request generation**: EXACT 180-minute structured session with warm-up, main work, cool-down; high volume; varied modalities.
+  - **Review**: Duration proximity to 180, exercise count (≥ 15), broad muscle coverage, reasonable set bounds.
+- **LLM-based actions**:
+  - Construct long-form plan with phased structure; calibrate rest and volume to sustain 3 hours.
+  - Emit JSON only.
+- **Likely failure modes**:
+  - Under/over duration by large margin; insufficient breadth; unrealistic set/reps; impractical density for 3 hours.
+- **Prompt variant**: Iterative refinement prompting.
+  - Approach: Generate three concepts (conservative/balanced/innovative), then select and refine best-fit into final JSON.
+  - What worked: More coherent long-duration pacing and coverage; better trade-off selection.
+  - What went wrong: Occasional leakage of intermediate text; sometimes merges concepts awkwardly.
+  - Remaining issues: Time estimate variance and cumulative fatigue realism remain challenging.
+
+For the 3-hour extreme plan, iterative refinement (three concepts → select → finalize) produced better pacing and coverage. It mitigated single-shot failures but sometimes leaked intermediate text or blended concepts awkwardly. Duration adherence and realistic fatigue management over long sessions remain open issues, suggesting the need for stricter schema guards and pacing heuristics.
+
+These scenarios and prompt variants are implemented and runnable in `ai-routine-planner/advanced-test-cases.ts` via `testComplexMultiConstraint`, `testAmbiguousContradictoryInstructions`, and `testExtremeEdgeCases`, with helpers `createStructuredConstraintPrompt`, `createRoleBasedExpertPrompt`, and `createIterativeRefinementPrompt`.
+
+## Add validators to your code
+
+- **Structurally invalid or infeasible content**: The LLM may emit empty names, zero exercises, extreme sets/reps/rest, or duplicate exercises. I added validators that require a non-empty `workout_name`, a non-empty `exercises` array, enforce bounds on sets (1–10), reps (1–50), rest (15–600s), and forbid duplicate exercises.
+- **Preference/feasibility mismatch**: The LLM can hallucinate exercises not supported by the user’s available equipment. I added a validator that computes the available exercise set from `UserPreferences.availableEquipment` and throws if any generated exercise is unavailable.
+- **Time budget inconsistency**: The LLM’s `estimated_duration` can be unrealistic versus session budget. I added a simple duration estimator (tempo + rest per set) and validators that (a) bound the deviation between computed duration and `estimated_duration`, and (b) require the plan to be within the user `timePerSession` +- tolerance.
+
+Validators are implemented in `ai-routine-planner/routine-planner.ts` within `validateAIGeneratedTemplate`, and are called after parsing both generation and customization flows.
